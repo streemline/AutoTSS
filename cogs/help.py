@@ -8,7 +8,7 @@ import discord
 
 
 async def cmd_autocomplete(ctx: discord.AutocompleteContext):
-    res = list()
+    res = []
     for cog in ctx.bot.cogs:
         for cmd in ctx.bot.cogs[cog].get_commands():
             if isinstance(cmd, discord.SlashCommandGroup):
@@ -17,15 +17,15 @@ async def cmd_autocomplete(ctx: discord.AutocompleteContext):
                 ):
                     continue
 
-                if len([sc for sc in cmd.subcommands if sc.name == 'help']) == 0:
+                if not [sc for sc in cmd.subcommands if sc.name == 'help']:
                     continue
 
-                if ctx.value.lower() in cmd.name + ' help':
-                    res.append('/' + cmd.name + ' help')
+                if ctx.value.lower() in f'{cmd.name} help':
+                    res.append(f'/{cmd.name} help')
 
             elif isinstance(cmd, discord.SlashCommand):
                 if ctx.value.lower() in cmd.name:
-                    res.append('/' + cmd.name)
+                    res.append(f'/{cmd.name}')
 
     res.sort()
     return res
@@ -44,7 +44,7 @@ class HelpCog(commands.Cog, name='Help'):
         command: Option(str, autocomplete=cmd_autocomplete, required=False),
     ) -> None:
         if command is None:
-            cmd_embeds = dict()
+            cmd_embeds = {}
             for cog in ctx.bot.cogs:
                 for cmd in ctx.bot.cogs[cog].get_commands():
                     if isinstance(cmd, discord.SlashCommandGroup):
@@ -56,7 +56,7 @@ class HelpCog(commands.Cog, name='Help'):
                         cmd_embeds[cog] = self.utils.group_help_embed(ctx, cmd)
 
                     elif isinstance(cmd, discord.SlashCommand):
-                        if cog in cmd_embeds.keys():
+                        if cog in cmd_embeds:
                             continue
 
                         cmd_embeds[cog] = self.utils.cog_help_embed(ctx, cog)

@@ -41,12 +41,12 @@ class DeviceCog(commands.Cog, name='Device'):
         name: Option(str, description='Name for device'),
     ) -> None:
         async with self.bot.db.execute(
-            'SELECT devices from autotss WHERE user = ?', (ctx.author.id,)
-        ) as cursor:
+                'SELECT devices from autotss WHERE user = ?', (ctx.author.id,)
+            ) as cursor:
             try:
                 devices = ujson.loads((await cursor.fetchone())[0])
             except TypeError:
-                devices = list()
+                devices = []
 
         if (len(devices) >= self.bot.max_devices) and (
             await self.bot.is_owner(ctx.author) == False
@@ -86,7 +86,7 @@ class DeviceCog(commands.Cog, name='Device'):
         await ctx.interaction.response.send_modal(modal)
         await modal.wait()
 
-        device = dict()
+        device = {}
 
         name_check = await self.utils.check_name(name, ctx.author.id)
         if name_check == -1:
@@ -191,7 +191,7 @@ class DeviceCog(commands.Cog, name='Device'):
 
                 raise commands.BadArgument(error)
 
-        device['saved_blobs'] = list()
+        device['saved_blobs'] = []
 
         # Add device information into the database
         devices.append(device)
@@ -228,14 +228,14 @@ class DeviceCog(commands.Cog, name='Device'):
         await ctx.defer(ephemeral=True)
 
         async with self.bot.db.execute(
-            'SELECT devices from autotss WHERE user = ?', (ctx.author.id,)
-        ) as cursor:
+                'SELECT devices from autotss WHERE user = ?', (ctx.author.id,)
+            ) as cursor:
             try:
                 devices = ujson.loads((await cursor.fetchone())[0])
             except TypeError:
-                devices = list()
+                devices = []
 
-        if len(devices) == 0:
+        if not devices:
             raise NoDevicesFound(ctx.author)
 
         confirm_embed = discord.Embed(title='Remove Device')
@@ -251,15 +251,14 @@ class DeviceCog(commands.Cog, name='Device'):
 
         view = SelectView(buttons, ctx)
         if len(devices) > 1:
-            device_options = list()
-            for device in devices:
-                device_options.append(
-                    discord.SelectOption(
-                        label=device['name'],
-                        description=f"ECID: {device['ecid']} | SHSH blob{'s' if len(device['saved_blobs']) != 1 else ''} saved: {len(device['saved_blobs'])}",
-                        emoji='📱',
-                    )
+            device_options = [
+                discord.SelectOption(
+                    label=device['name'],
+                    description=f"ECID: {device['ecid']} | SHSH blob{'s' if len(device['saved_blobs']) != 1 else ''} saved: {len(device['saved_blobs'])}",
+                    emoji='📱',
                 )
+                for device in devices
+            ]
 
             device_options.append(discord.SelectOption(label='Cancel', emoji='❌'))
 
@@ -341,7 +340,7 @@ class DeviceCog(commands.Cog, name='Device'):
 
         devices.pop(num)
 
-        if len(devices) == 0:
+        if not devices:
             await self.bot.db.execute(
                 'DELETE FROM autotss WHERE user = ?', (ctx.author.id,)
             )
@@ -371,17 +370,17 @@ class DeviceCog(commands.Cog, name='Device'):
             user = ctx.author
 
         async with self.bot.db.execute(
-            'SELECT devices from autotss WHERE user = ?', (user.id,)
-        ) as cursor:
+                'SELECT devices from autotss WHERE user = ?', (user.id,)
+            ) as cursor:
             try:
                 devices = ujson.loads((await cursor.fetchone())[0])
             except TypeError:
-                devices = list()
+                devices = []
 
-        if len(devices) == 0:
+        if not devices:
             raise NoDevicesFound(user)
 
-        device_embeds = list()
+        device_embeds = []
         for device in devices:
             num_blobs = ','.join(
                 textwrap.wrap(

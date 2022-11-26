@@ -73,7 +73,7 @@ class AdminCog(commands.Cog, name='Administrator'):
         if await self.bot.is_owner(ctx.author) == False:
             raise commands.NotOwner()
 
-        if not any(module == x for x in await self.get_modules()):
+        if all(module != x for x in await self.get_modules()):
             embed = discord.Embed(title='Unload Module')
             embed.add_field(
                 name='Error', value=f'Module `{module}` does not exist!', inline=False
@@ -398,29 +398,29 @@ class AdminCog(commands.Cog, name='Administrator'):
             return
 
         async with self.bot.db.execute(
-            'SELECT devices from autotss WHERE user = ?', (old.id,)
-        ) as cursor:
+                'SELECT devices from autotss WHERE user = ?', (old.id,)
+            ) as cursor:
             try:
                 old_devices = ujson.loads((await cursor.fetchone())[0])
             except TypeError:
-                old_devices = list()
+                old_devices = []
 
         async with self.bot.db.execute(
-            'SELECT devices from autotss WHERE user = ?', (new.id,)
-        ) as cursor:
+                'SELECT devices from autotss WHERE user = ?', (new.id,)
+            ) as cursor:
             try:
                 new_devices = ujson.loads((await cursor.fetchone())[0])
             except TypeError:
-                new_devices = list()
+                new_devices = []
 
-        if len(old_devices) == 0:
+        if not old_devices:
             invalid_embed.description = (
                 f'{old.mention} has no devices added to AutoTSS.'
             )
             await ctx.respond(embed=invalid_embed)
             return
 
-        if len(new_devices) > 0:
+        if new_devices:
             invalid_embed.description = (
                 f'{new.mention} has devices added to AutoTSS already.'
             )

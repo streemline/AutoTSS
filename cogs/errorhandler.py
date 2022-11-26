@@ -63,9 +63,7 @@ class ErrorHandlerCog(commands.Cog, name='ErrorHandler'):
             ]
 
             if len(missing_perms) > 2:
-                fmt = '{}, and {}'.format(
-                    ', '.join(missing_perms[:-1]), missing_perms[-1]
-                )
+                fmt = f"{', '.join(missing_perms[:-1])}, and {missing_perms[-1]}"
             else:
                 fmt = ' and '.join(missing_perms)
 

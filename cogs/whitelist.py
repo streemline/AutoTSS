@@ -88,19 +88,18 @@ class WhitelistCog(commands.Cog, name='Whitelist'):
 
         if channel is None:
             raise commands.ChannelNotFound(whitelist.channel)
-        else:
-            await self.bot.db.execute(
-                'UPDATE whitelist SET enabled = ? WHERE guild = ?',
-                (not whitelist.enabled, ctx.guild.id),
-            )
-            await self.bot.db.commit()
+        await self.bot.db.execute(
+            'UPDATE whitelist SET enabled = ? WHERE guild = ?',
+            (not whitelist.enabled, ctx.guild.id),
+        )
+        await self.bot.db.commit()
 
-            embed = discord.Embed(title='Whitelist')
-            embed.description = f"No{'w' if whitelist.enabled == False else ' longer'} restricting commands for AutoTSS to {channel.mention}."
-            embed.set_footer(
-                text=ctx.author.display_name,
-                icon_url=ctx.author.display_avatar.with_static_format('png').url,
-            )
+        embed = discord.Embed(title='Whitelist')
+        embed.description = f"No{'w' if whitelist.enabled == False else ' longer'} restricting commands for AutoTSS to {channel.mention}."
+        embed.set_footer(
+            text=ctx.author.display_name,
+            icon_url=ctx.author.display_avatar.with_static_format('png').url,
+        )
 
         await ctx.respond(embed=embed)
 
