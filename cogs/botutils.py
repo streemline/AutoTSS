@@ -42,27 +42,17 @@ class UtilsCog(commands.Cog, name='Utilities'):
         except ValueError or TypeError:
             return False
 
-        if 0x8010 <= cpid < 0x8900:  # A10+ device ApNonces are 64 characters long
-            apnonce_len = 64
-        else:  # A9 and below device ApNonces are 40 characters
-            apnonce_len = 40
-
-        if len(nonce) != apnonce_len:
-            return False
-
-        return True
+        apnonce_len = 64 if 0x8010 <= cpid < 0x8900 else 40
+        return len(nonce) == apnonce_len
 
     async def check_boardconfig(self, identifier: str, boardconfig: str) -> bool:
         if boardconfig[-2:] != 'ap':
             return False
 
         api = await self.fetch_ipswme_api(identifier)
-        if not any(
-            x['boardconfig'].lower() == boardconfig for x in api['boards']
-        ):  # If no boardconfigs for the given device identifier match the boardconfig, then return False
-            return False
-        else:
-            return True
+        return any(
+            (x['boardconfig'].lower() == boardconfig for x in api['boards'])
+        )
 
     async def check_ecid(self, ecid: str) -> int:
         if (
@@ -86,12 +76,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
             except TypeError:  # No devices in database
                 return 0
 
-        if any(
-            ecid in device_info for device_info in devices
-        ):  # There's no need to convert the json string to a dict here
-            return -2
-
-        return 0
+        return -2 if any(ecid in device_info for device_info in devices) else 0
 
     def check_generator(self, generator: str) -> bool:
         if not generator.startswith('0x'):  # Generator must start wth '0x'
@@ -113,13 +98,10 @@ class UtilsCog(commands.Cog, name='Utilities'):
         async with self.bot.session.get(f'{API_URL}/devices') as resp:
             api = await resp.json()
 
-        if identifier not in [device['identifier'] for device in api]:
-            return False
-
-        return True
+        return identifier in [device['identifier'] for device in api]
 
     async def check_name(self, name: str, user: int) -> int:
-        if not len(name) <= 20:  # Length check
+        if len(name) > 20:  # Length check
             return -1
 
         async with self.bot.db.execute(
@@ -130,10 +112,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
             except:
                 return 0
 
-        if any(x['name'] == name.lower() for x in devices):
-            return -2
-
-        return 0
+        return -2 if any(x['name'] == name.lower() for x in devices) else 0
 
     def check_apnonce_pair(self, generator: str, apnonce: str) -> bool:
         gen = bytes.fromhex(generator.removeprefix('0x'))
@@ -206,27 +185,24 @@ class UtilsCog(commands.Cog, name='Utilities'):
         )
 
     def shsh_count(self, ecid: str = None) -> int:
-        if ecid:
-            shsh_count = len(
-                [
-                    blob
-                    for blob in glob.glob(
+        return (
+            len(
+                list(
+                    glob.glob(
                         str(pathlib.Path(f'Data/Blobs/{ecid}/**/*.shsh*')),
                         recursive=True,
                     )
-                ]
+                )
             )
-        else:
-            shsh_count = len(
-                [
-                    blob
-                    for blob in glob.glob(
+            if ecid
+            else len(
+                list(
+                    glob.glob(
                         str(pathlib.Path('Data/Blobs/**/*.shsh*')), recursive=True
                     )
-                ]
+                )
             )
-
-        return shsh_count
+        )
 
     async def update_device_count(self) -> None:
         async with self.bot.db.execute(
@@ -262,7 +238,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
         embed = {
             'title': f"/{' '.join((cmd.full_parent_name, cmd.name)) or cmd.name} ",
             'description': cmd.description,
-            'fields': list(),
+            'fields': [],
             'footer': {
                 'text': ctx.author.display_name,
                 'icon_url': str(
@@ -270,6 +246,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
                 ),
             },
         }
+
 
         for arg in cmd.options:
             embed['title'] += f'<{arg.name}> ' if arg.required else f'[{arg.name}] '
@@ -288,7 +265,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
     ) -> list[discord.Embed]:
         embed = {
             'title': f"{cog.capitalize() if cog != 'tss' else cog.upper()} Commands",
-            'fields': list(),
+            'fields': [],
             'footer': {
                 'text': ctx.author.display_name,
                 'icon_url': str(
@@ -296,6 +273,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
                 ),
             },
         }
+
 
         for cmd in self.bot.cogs[cog].get_commands():
             if isinstance(cmd, discord.SlashCommandGroup):
@@ -322,7 +300,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
     ) -> list[discord.Embed]:
         embed = {
             'title': f"{group.name.capitalize() if group.name != 'tss' else group.name.upper()} Commands",
-            'fields': list(),
+            'fields': [],
             'footer': {
                 'text': ctx.author.display_name,
                 'icon_url': str(
@@ -330,6 +308,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
                 ),
             },
         }
+
 
         for cmd in group.subcommands:
             cmd_field = {
@@ -429,7 +408,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
     async def _save_blob(
         self, device: dict, firm: dict, manifest: str, tmpdir: aiopath.AsyncPath
     ) -> bool:
-        generators = list()
+        generators = []
         save_path = ['Data', 'Blobs', device['ecid'], firm['version'], firm['buildid']]
 
         args = [
@@ -449,26 +428,26 @@ class UtilsCog(commands.Cog, name='Utilities'):
             '-e',
             f"0x{device['ecid']}",
             '-m',
-            str(manifest),
+            manifest,
             '--save-path',
             str(tmpdir),
             '-s',
         ]
+
 
         if device['apnonce'] is not None:
             args.append('--apnonce')
             args.append(device['apnonce'])
             save_path.append(device['apnonce'])
         else:
-            generators.append('0x1111111111111111')
-            generators.append('0xbd34a880be0b53f3')
+            generators.extend(('0x1111111111111111', '0xbd34a880be0b53f3'))
             save_path.append('no-apnonce')
 
         if device['generator'] is not None and device['generator'] not in generators:
             generators.append(device['generator'])
 
         save_path = aiopath.AsyncPath('/'.join(save_path))
-        if len(generators) == 0:
+        if not generators:
             if len([blob async for blob in save_path.glob('*.shsh*')]) == 1:
                 return True
 
@@ -533,7 +512,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
                 except FileNotFoundError:
                     pass
 
-        if len([blob async for blob in tmpdir.glob('*/') if await blob.is_dir()]) == 0:
+        if not [blob async for blob in tmpdir.glob('*/') if await blob.is_dir()]:
             return
 
         await asyncio.to_thread(self._create_tar, tmpdir)
@@ -546,16 +525,15 @@ class UtilsCog(commands.Cog, name='Utilities'):
     async def get_firms(self, identifier: str) -> list:
         api = await self.fetch_ipswme_api(identifier)
 
-        buildids = list()
-        for firm in api['firmwares']:
-            buildids.append(
-                {
-                    'version': firm['version'],
-                    'buildid': firm['buildid'],
-                    'url': firm['url'],
-                    'signed': firm['signed'],
-                }
-            )
+        buildids = [
+            {
+                'version': firm['version'],
+                'buildid': firm['buildid'],
+                'url': firm['url'],
+                'signed': firm['signed'],
+            }
+            for firm in api['firmwares']
+        ]
 
         async with self.bot.session.get(f'{BETA_API_URL}/{identifier}') as resp:
             if resp.status != 200:
@@ -582,10 +560,7 @@ class UtilsCog(commands.Cog, name='Utilities'):
         return buildids
 
     async def save_device_blobs(self, device: dict) -> None:
-        stats = {
-            'saved_blobs': list(),
-            'failed_blobs': list(),
-        }
+        stats = {'saved_blobs': [], 'failed_blobs': []}
 
         firms = await self.get_firms(device['identifier'])
         for firm in [f for f in firms if f['signed'] == True]:
@@ -630,10 +605,11 @@ class UtilsCog(commands.Cog, name='Utilities'):
         await self.bot.db.commit()
 
         user_stats = {
-            'blobs_saved': sum([len(d['saved_blobs']) for d in data]),
+            'blobs_saved': sum(len(d['saved_blobs']) for d in data),
             'devices_saved': len([d for d in data if d['saved_blobs']]),
             'devices': [d['device'] for d in data],
         }
+
 
         for d in range(len(user_stats['devices'])):
             user_stats['devices'][d]['failed_blobs'] = data[d]['failed_blobs']
