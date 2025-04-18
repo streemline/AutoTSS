@@ -45,17 +45,17 @@ class TSSCog(commands.Cog, name='TSS'):
             raise commands.NotOwner()
 
         async with self.bot.db.execute(
-            'SELECT devices from autotss WHERE user = ?', (user.id,)
-        ) as cursor:
+                'SELECT devices from autotss WHERE user = ?', (user.id,)
+            ) as cursor:
             try:
                 devices = ujson.loads((await cursor.fetchone())[0])
             except TypeError:
-                devices = list()
+                devices = []
 
-        if len(devices) == 0:
+        if not devices:
             raise NoDevicesFound(user)
 
-        total_blobs = sum([len(device['saved_blobs']) for device in devices])
+        total_blobs = sum(len(device['saved_blobs']) for device in devices)
         if total_blobs == 0:
             raise NoSHSHFound(user)
 
@@ -76,14 +76,14 @@ class TSSCog(commands.Cog, name='TSS'):
                 )
             ]
 
-            for device in devices:
-                device_options.append(
-                    discord.SelectOption(
-                        label=device['name'],
-                        description=f"ECID: {device['ecid']} | SHSH blob{'s' if len(device['saved_blobs']) != 1 else ''} saved: {len(device['saved_blobs'])}",
-                        emoji='📱',
-                    )
+            device_options.extend(
+                discord.SelectOption(
+                    label=device['name'],
+                    description=f"ECID: {device['ecid']} | SHSH blob{'s' if len(device['saved_blobs']) != 1 else ''} saved: {len(device['saved_blobs'])}",
+                    emoji='📱',
                 )
+                for device in devices
+            )
 
             device_options.append(discord.SelectOption(label='Cancel', emoji='❌'))
 
@@ -141,23 +141,23 @@ class TSSCog(commands.Cog, name='TSS'):
             user = ctx.author
 
         async with self.bot.db.execute(
-            'SELECT devices from autotss WHERE user = ?', (user.id,)
-        ) as cursor:
+                'SELECT devices from autotss WHERE user = ?', (user.id,)
+            ) as cursor:
             try:
                 devices = ujson.loads((await cursor.fetchone())[0])
             except TypeError:
-                devices = list()
+                devices = []
 
-        if len(devices) == 0:
+        if not devices:
             raise NoDevicesFound(user)
 
-        device_embeds = list()
+        device_embeds = []
         for device in devices:
             blobs = sorted(device['saved_blobs'], key=lambda firm: firm['buildid'])
 
             device_embed = {
                 'title': f"*{device['name']}*'s Saved SHSH Blobs ({devices.index(device) + 1}/{len(devices)})",
-                'fields': list(),
+                'fields': [],
                 'footer': {
                     'text': ctx.author.display_name,
                     'icon_url': str(
@@ -166,7 +166,8 @@ class TSSCog(commands.Cog, name='TSS'):
                 },
             }
 
-            blobs_list = dict()
+
+            blobs_list = {}
             for firm in blobs:
                 major_ver = int(firm['version'].split('.')[0])
                 if major_ver not in blobs_list:
@@ -198,14 +199,14 @@ class TSSCog(commands.Cog, name='TSS'):
         await ctx.defer(ephemeral=True)
 
         async with self.bot.db.execute(
-            'SELECT devices from autotss WHERE user = ?', (ctx.author.id,)
-        ) as cursor:
+                'SELECT devices from autotss WHERE user = ?', (ctx.author.id,)
+            ) as cursor:
             try:
                 devices = ujson.loads((await cursor.fetchone())[0])
             except TypeError:
-                devices = list()
+                devices = []
 
-        if len(devices) == 0:
+        if not devices:
             raise NoDevicesFound(ctx.author)
 
         if self.utils.saving_blobs:

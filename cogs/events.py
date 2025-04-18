@@ -32,7 +32,7 @@ class EventsCog(commands.Cog, name='Events'):
 
         self.bot.logger.debug('Fetching all signed firmwares.')
 
-        api = dict()
+        api = {}
         for device in [d['identifier'] for d in devices]:
             api[device] = await self.utils.get_firms(device)
 
@@ -57,14 +57,14 @@ class EventsCog(commands.Cog, name='Events'):
         )
 
         description = None
-        for device in api.keys():
+        for device, value in api.items():
             if device not in self._api.keys():  # If new device is added to the API
                 self.bot.logger.debug(f'New device has been detected: {device}.')
                 self._api[device] = api[device]
                 continue
 
             firm_type = 'iOS' if 'AppleTV' not in device else 'tvOS'
-            for firm in api[device]:
+            for firm in value:
                 if firm['signed'] == True:
                     if firm not in self._api[device]:  # If firmware was just released
                         self.bot.logger.debug(
@@ -103,17 +103,17 @@ class EventsCog(commands.Cog, name='Events'):
                     blobs_saved = sum(user['blobs_saved'] for user in data)
                     devices_saved = sum(user['devices_saved'] for user in data)
 
-                    if blobs_saved > 0:
-                        description = ' '.join(
+                    description = (
+                        ' '.join(
                             (
                                 f"Saved {blobs_saved} SHSH blob{'s' if blobs_saved > 1 else ''}",
                                 f"for {devices_saved} device{'s' if devices_saved > 1 else ''}",
                                 f"in {finish_time} second{'s' if finish_time != 1 else ''}.",
                             )
                         )
-
-                    else:
-                        description = 'All SHSH blobs have already been saved.'
+                        if blobs_saved > 0
+                        else 'All SHSH blobs have already been saved.'
+                    )
 
                     break
 
